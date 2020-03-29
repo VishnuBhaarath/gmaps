@@ -26,6 +26,9 @@ android {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'com.google.firebase:firebase-analytics:17.2.3'
+    implementation 'com.nabinbhandari.android:permissions:3.8'
+    implementation 'com.google.android.gms:play-services-plus:17.0.0'
+    implementation 'com.google.android.gms:play-services-location:17.0.0'
     // add SDKs for any other desired Firebase products
     implementation  'com.google.firebase:firebase-auth:19.3.0'
     implementation 'com.google.firebase:firebase-database:19.2.1'
