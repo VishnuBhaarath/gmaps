@@ -25,16 +25,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private GoogleMap mMap;
     private FirebaseAuth firebaseAuth;
-    private int i;
-    double latarray[],longarray;    //declaring array
+    private int i,j;
+    double latarray[],longarray[];    //declaring array
+    private long totalusers;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
         latarray = new double[20];
+        longarray=new double[20];
         firebaseAuth= FirebaseAuth.getInstance();
         i=0;
+        j=0;
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         receive();
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -57,14 +60,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap = googleMap;
 
         // Add a marker in Sydney and move the camera
-        LatLng sydney = new LatLng(latarray[0], 141);
 
-        LatLng India=new LatLng(7,140);
-        mMap.addMarker(new MarkerOptions().position(India).title("Marker in India"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(India));
-        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
-    }
+
+       for(i=0;i<totalusers;i++){
+        mMap.addMarker(new MarkerOptions().position( new LatLng(latarray[i], longarray[i])));
+        mMap.moveCamera(CameraUpdateFactory.newLatLng( new LatLng(latarray[i], longarray[i])));
+
+    }}
     public void receive(){
         FirebaseDatabase firebaseDatabase=FirebaseDatabase.getInstance();
         DatabaseReference myref=firebaseDatabase.getReference();
@@ -74,6 +76,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                 for(DataSnapshot snapshot : dataSnapshot.getChildren()){
+                    totalusers=dataSnapshot.getChildrenCount();
                     for(DataSnapshot snapshot1:snapshot.getChildren()){
                         if(snapshot1.getKey().equals("lat")){
 
@@ -82,7 +85,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         Log.d(TAG,"lat is "+ latarray[i]);
 
                             i=i+1;
-                }}}
+                }
+                        if(snapshot1.getKey().equals("long")){
+
+                            longarray[j]= Double.parseDouble(snapshot1.getValue().toString());
+
+                            Log.d(TAG,"lat is "+ longarray[j]);
+
+                            j=j+1;
+                        }
+
+
+                    }}
             }
 
             @Override

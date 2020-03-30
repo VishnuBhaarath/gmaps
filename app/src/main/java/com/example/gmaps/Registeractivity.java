@@ -1,18 +1,24 @@
 package com.example.gmaps;
 
 import android.Manifest;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.View;
+import android.webkit.MimeTypeMap;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -21,34 +27,51 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 import com.nabinbhandari.android.permissions.PermissionHandler;
 import com.nabinbhandari.android.permissions.Permissions;
 
+import java.io.File;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Objects;
 
 public class  Registeractivity extends AppCompatActivity {
+    private static final int PICK_IMAGE_REQUEST = 1;
     EditText useremail,userpassword,userconfirmpassword,username,userage;
-    Button register;
+    Button register,chooseimage;
     TextView uslogin;
     double longitude,latitude;
+    Uri mImageUri;
+    ImageView mImageView;
     private FirebaseAuth firebaseAuth;
     String password,confpassword,name,emailid,age;
     private FusedLocationProviderClient fusedLocationProviderClient;
     private LocationRequest locationRequest;
+    private Instant Picasso;
+    private StorageReference mStorageRef;
+    private FirebaseDatabase firebaseDatabase;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.registeractivity);
+        chooseimage=(Button)findViewById(R.id.chooseimage);
+        mImageView=(ImageView)findViewById(R.id.imageview);
+        mStorageRef = FirebaseStorage.getInstance().getReference("uploads");
         SetUpViews();
         requestlocationupdates();
         callpermissions();
+
         firebaseAuth=FirebaseAuth.getInstance();
         register=(Button)findViewById(R.id.btregister);
         register.setOnClickListener(new View.OnClickListener() {
@@ -63,6 +86,8 @@ public class  Registeractivity extends AppCompatActivity {
                             if(task.isSuccessful()){
                                 // sendverificationmail();
                                 senduserdata();
+                                uploadFile();
+
                                // Toast.makeText(Registeractivity.this,"Successfully send, mail send",Toast.LENGTH_SHORT).show();
                                   firebaseAuth.signOut();
                                 finish();
@@ -86,7 +111,40 @@ public class  Registeractivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
+        chooseimage.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Openfilechooser();
+            }
+        });
 
+    }
+
+    /**
+     * Dispatch incoming result to the correct fragment.
+     *
+     * @param requestCode
+     * @param resultCode
+     * @param data
+     */
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK
+                && data != null && data.getData() != null) {
+           mImageUri = data.getData();
+            mImageView.setImageURI(mImageUri);
+
+
+        }
+    }
+
+    private void Openfilechooser(){
+        Intent intent=new Intent();
+        intent.setType("image/*");
+        intent.setAction(Intent.ACTION_GET_CONTENT);
+        startActivityForResult(intent,PICK_IMAGE_REQUEST);
     }
     public void SetUpViews(){
         useremail=(EditText)findViewById(R.id.etemail);
@@ -153,6 +211,7 @@ public class  Registeractivity extends AppCompatActivity {
             public void onLocationResult(LocationResult locationResult) {
                 super.onLocationResult(locationResult);
              latitude=locationResult.getLastLocation().getLatitude();
+             longitude=locationResult.getLastLocation().getLongitude();
                 Log.e("Mainactivity", "lat" + locationResult.getLastLocation().getLatitude());
                 Log.e("Mainactivity", "Long" + locationResult.getLastLocation().getLongitude());
             }
@@ -188,7 +247,7 @@ public class  Registeractivity extends AppCompatActivity {
     private void senduserdata(){
 
 
-        FirebaseDatabase firebaseDatabase=FirebaseDatabase.getInstance();
+       firebaseDatabase=FirebaseDatabase.getInstance();
         DatabaseReference myref=firebaseDatabase.getReference((firebaseAuth.getUid())).child("Name");
         myref.setValue(name);
         DatabaseReference myref1=firebaseDatabase.getReference((firebaseAuth.getUid())).child("Age");
@@ -197,6 +256,37 @@ public class  Registeractivity extends AppCompatActivity {
         myref2.setValue(latitude);
         DatabaseReference myref3=firebaseDatabase.getReference((firebaseAuth.getUid())).child("lat");
         myref3.setValue(latitude);
+        DatabaseReference myref4=firebaseDatabase.getReference((firebaseAuth.getUid())).child("long");
+        myref4.setValue(longitude);
 
+    }
+    private void uploadFile(){
+        if(mImageUri!=null){
+            StorageReference fileReference = mStorageRef.child(firebaseAuth.getUid()
+                    + "." + getFileExtension(mImageUri));
+
+           String url= mStorageRef.child(firebaseAuth.getUid()
+                    + "." + getFileExtension(mImageUri)).getDownloadUrl().toString();
+            DatabaseReference myref5=firebaseDatabase.getReference((firebaseAuth.getUid())).child("url");
+            myref5.setValue(url);
+          fileReference.putFile(mImageUri).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+              @Override
+              public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+
+                    Toast.makeText(Registeractivity.this,"Succes",Toast.LENGTH_SHORT).show();
+
+              }
+          }).addOnFailureListener(new OnFailureListener() {
+              @Override
+              public void onFailure(@NonNull Exception e) {
+                  Toast.makeText(Registeractivity.this,"error",Toast.LENGTH_SHORT).show();
+              }
+          });
+        }
+    }
+    private String getFileExtension(Uri uri) {
+        ContentResolver cR = getContentResolver();
+        MimeTypeMap mime = MimeTypeMap.getSingleton();
+        return mime.getExtensionFromMimeType(cR.getType(uri));
     }
 }
