@@ -3,8 +3,11 @@ package com.example.gmaps;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.FragmentActivity;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdate;
@@ -25,19 +28,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private GoogleMap mMap;
     private FirebaseAuth firebaseAuth;
-    private int i,j;
-    double latarray[],longarray[];    //declaring array
+    private int i,j,a;
+    private static final String TAG = "Mapsactivity";
+    double latarray[],longarray[];
+    String name[];
+    //declaring array
     private long totalusers;
-
+    private Button bt1;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
-        latarray = new double[20];
-        longarray=new double[20];
         firebaseAuth= FirebaseAuth.getInstance();
+        bt1=(Button)findViewById(R.id.logout);
+        logout();
         i=0;
         j=0;
+        a=0;
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         receive();
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -61,28 +68,26 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         // Add a marker in Sydney and move the camera
 
-
-       for(i=0;i<totalusers;i++){
-        mMap.addMarker(new MarkerOptions().position( new LatLng(latarray[i], longarray[i])));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng( new LatLng(latarray[i], longarray[i])));
-
-    }}
+       }
     public void receive(){
         FirebaseDatabase firebaseDatabase=FirebaseDatabase.getInstance();
         DatabaseReference myref=firebaseDatabase.getReference();
         myref.addValueEventListener(new ValueEventListener() {
-            private static final String TAG = "Mapsactivity";
+
 
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                 for(DataSnapshot snapshot : dataSnapshot.getChildren()){
-                    totalusers=dataSnapshot.getChildrenCount();
+                    totalusers=snapshot.getChildrenCount();
+                    latarray = new double[(int) totalusers];
+                    longarray=new double[(int) totalusers];
+                    name=new String[(int) totalusers];
                     for(DataSnapshot snapshot1:snapshot.getChildren()){
                         if(snapshot1.getKey().equals("lat")){
 
                           latarray[i]= Double.parseDouble(snapshot1.getValue().toString());
 
-                        Log.d(TAG,"lat is "+ latarray[i]);
+
 
                             i=i+1;
                 }
@@ -90,18 +95,40 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                             longarray[j]= Double.parseDouble(snapshot1.getValue().toString());
 
-                            Log.d(TAG,"lat is "+ longarray[j]);
+
 
                             j=j+1;
                         }
+                        if(snapshot1.getKey().equals("Name")){
+
+                            name[a]= snapshot1.getValue().toString();
 
 
-                    }}
+
+                            a=a+1;
+                        }
+                        for(int k=0;k<totalusers;k++){
+                        LatLng user = new LatLng(latarray[0], longarray[0]);
+                        mMap.addMarker(new MarkerOptions().position(user).title(name[k]));
+                        mMap.moveCamera(CameraUpdateFactory.newLatLng(user));
+
+                    }}}
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError databaseError) {
 
+            }
+        });
+
+    }
+    private void logout(){
+        bt1.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                firebaseAuth.signOut();
+                finish();
+                startActivity(new Intent(MapsActivity.this,loginactivity.class));
             }
         });
     }

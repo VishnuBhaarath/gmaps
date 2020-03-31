@@ -54,6 +54,7 @@ public class  Registeractivity extends AppCompatActivity {
     double longitude,latitude;
     Uri mImageUri;
     ImageView mImageView;
+    private StorageReference fileReference;
     private FirebaseAuth firebaseAuth;
     String password,confpassword,name,emailid,age;
     private FusedLocationProviderClient fusedLocationProviderClient;
@@ -61,6 +62,7 @@ public class  Registeractivity extends AppCompatActivity {
     private Instant Picasso;
     private StorageReference mStorageRef;
     private FirebaseDatabase firebaseDatabase;
+    private Boolean value=false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -85,8 +87,10 @@ public class  Registeractivity extends AppCompatActivity {
                         public void onComplete(@NonNull Task<AuthResult> task) {
                             if(task.isSuccessful()){
                                 // sendverificationmail();
-                                senduserdata();
+
                                 uploadFile();
+                                senduserdata();
+
 
                                // Toast.makeText(Registeractivity.this,"Successfully send, mail send",Toast.LENGTH_SHORT).show();
                                   firebaseAuth.signOut();
@@ -107,7 +111,7 @@ public class  Registeractivity extends AppCompatActivity {
         uslogin.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent=new Intent(Registeractivity.this,MapsActivity.class);
+                Intent intent=new Intent(Registeractivity.this,loginactivity.class);
                 startActivity(intent);
             }
         });
@@ -150,16 +154,13 @@ public class  Registeractivity extends AppCompatActivity {
         useremail=(EditText)findViewById(R.id.etemail);
         userpassword=(EditText)findViewById(R.id.Password);
         username=(EditText)findViewById(R.id.Name);
-        userage=(EditText)findViewById(R.id.age);
-        userconfirmpassword=(EditText)findViewById(R.id.confPassword);
+
     }
     private Boolean validate(){
         Boolean result=false;
         emailid=useremail.getText().toString().trim();
         password=userpassword.getText().toString().trim();
-        confpassword=userconfirmpassword.getText().toString().trim();
         name=username.getText().toString().trim();
-        age=userage.getText().toString().trim();
         if(emailid.isEmpty()){
             useremail.setError("Mail Id required");
             useremail.requestFocus();
@@ -172,7 +173,7 @@ public class  Registeractivity extends AppCompatActivity {
             userpassword.setError("Password required");
             userpassword.requestFocus();
         }
-        else if(emailid.isEmpty()|| password.isEmpty() || confpassword.isEmpty() || name.isEmpty()){
+        else if(emailid.isEmpty()|| password.isEmpty() || name.isEmpty()){
             Toast.makeText(Registeractivity.this,"Registration failed,please enter all the details",Toast.LENGTH_SHORT).show();
         }
         else{
@@ -212,8 +213,8 @@ public class  Registeractivity extends AppCompatActivity {
                 super.onLocationResult(locationResult);
              latitude=locationResult.getLastLocation().getLatitude();
              longitude=locationResult.getLastLocation().getLongitude();
-                Log.e("Mainactivity", "lat" + locationResult.getLastLocation().getLatitude());
-                Log.e("Mainactivity", "Long" + locationResult.getLastLocation().getLongitude());
+               // Log.e("Mainactivity", "lat" + locationResult.getLastLocation().getLatitude());
+                //Log.e("Mainactivity", "Long" + locationResult.getLastLocation().getLongitude());
             }
         }, getMainLooper());
     }
@@ -250,40 +251,51 @@ public class  Registeractivity extends AppCompatActivity {
        firebaseDatabase=FirebaseDatabase.getInstance();
         DatabaseReference myref=firebaseDatabase.getReference((firebaseAuth.getUid())).child("Name");
         myref.setValue(name);
-        DatabaseReference myref1=firebaseDatabase.getReference((firebaseAuth.getUid())).child("Age");
-        myref1.setValue(age);
         DatabaseReference myref2=firebaseDatabase.getReference((firebaseAuth.getUid())).child("lat");
         myref2.setValue(latitude);
         DatabaseReference myref3=firebaseDatabase.getReference((firebaseAuth.getUid())).child("lat");
         myref3.setValue(latitude);
         DatabaseReference myref4=firebaseDatabase.getReference((firebaseAuth.getUid())).child("long");
         myref4.setValue(longitude);
+        fileReference.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
+                @Override
+                public void onSuccess(Uri uri) {
+                    DatabaseReference myref5=firebaseDatabase.getReference((firebaseAuth.getUid())).child("url");
+                    Toast.makeText(Registeractivity.this,""+uri,Toast.LENGTH_SHORT).show();
+                    Log.d("nsd",""+uri);
+                }
+            }).addOnFailureListener(new OnFailureListener() {
+                @Override
+                public void onFailure(@NonNull Exception e) {
+
+                }
+            });
+
 
     }
     private void uploadFile(){
         if(mImageUri!=null){
-            StorageReference fileReference = mStorageRef.child(firebaseAuth.getUid()
-                    + "." + getFileExtension(mImageUri));
+        fileReference = mStorageRef.child(firebaseAuth.getUid()
+                    +"."+ getFileExtension(mImageUri));
 
-           String url= mStorageRef.child(firebaseAuth.getUid()
-                    + "." + getFileExtension(mImageUri)).getDownloadUrl().toString();
-            DatabaseReference myref5=firebaseDatabase.getReference((firebaseAuth.getUid())).child("url");
-            myref5.setValue(url);
           fileReference.putFile(mImageUri).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
               @Override
               public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
 
-                    Toast.makeText(Registeractivity.this,"Succes",Toast.LENGTH_SHORT).show();
+                    //Toast.makeText(Registeractivity.this,"Succes",Toast.LENGTH_SHORT).show();
+                    value=true;
 
               }
           }).addOnFailureListener(new OnFailureListener() {
               @Override
               public void onFailure(@NonNull Exception e) {
-                  Toast.makeText(Registeractivity.this,"error",Toast.LENGTH_SHORT).show();
+                  Toast.makeText(Registeractivity.this,""+e.getMessage(),Toast.LENGTH_SHORT).show();
               }
           });
         }
     }
+
+
     private String getFileExtension(Uri uri) {
         ContentResolver cR = getContentResolver();
         MimeTypeMap mime = MimeTypeMap.getSingleton();
